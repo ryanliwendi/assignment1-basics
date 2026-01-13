@@ -1,10 +1,11 @@
+import os
 import regex as re
 from collections import defaultdict
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
 def train_bpe(
-    input_path: str,
+    input_path: str | os.PathLike,
     vocab_size: int,
     special_tokens: list[str]
 ) -> tuple[
