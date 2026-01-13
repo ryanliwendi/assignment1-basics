@@ -3,20 +3,6 @@ from collections import defaultdict
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
-def to_tuples(s: str) -> tuple[bytes, ...]:
-    """
-    Converts a Unicode string into a tuple of single-byte symbols.
-
-    Args:
-        s (str): Input Unicode string (pre-token).
-
-    Returns:
-        tuple[bytes, ...]: A variable-length tuple where each element is a
-        single-byte `bytes` object representing the UTF-8 encoding of `s`.
-    """
-    encoded = s.encode(encoding = 'utf-8')
-    return tuple(bytes([b]) for b in encoded)
-
 def train_bpe(
     input_path: str,
     vocab_size: int,
@@ -65,7 +51,7 @@ def train_bpe(
         text = f.read()
 
     # Step 3: Chunking and Removing Special Tokens
-    if len(special_tokens) == 0:
+    if len(special_tokens) != 0:
         tokens_escaped = [re.escape(token) for token in special_tokens]
         pattern = '|'.join(tokens_escaped)
         chunks: list[str] = re.split(pattern = pattern, string = text)
@@ -116,3 +102,18 @@ def train_bpe(
             new_pre_tokens[updated_token] += count
         pre_tokens = new_pre_tokens
     return vocab, merges
+
+
+def to_tuples(s: str) -> tuple[bytes, ...]:
+    """
+    Converts a Unicode string into a tuple of single-byte symbols.
+
+    Args:
+        s (str): Input Unicode string (pre-token).
+
+    Returns:
+        tuple[bytes, ...]: A variable-length tuple where each element is a
+        single-byte `bytes` object representing the UTF-8 encoding of `s`.
+    """
+    encoded = s.encode(encoding = 'utf-8')
+    return tuple(bytes([b]) for b in encoded)
