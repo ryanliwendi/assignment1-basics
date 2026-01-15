@@ -61,7 +61,8 @@ class Tokenizer:
         text: str
     ) -> list[int]:
         # Step 1: Chunk the string by special tokens
-        escaped = [re.escape(token) for token in self.special_tokens]
+        sorted_special_tokens = sorted(self.special_tokens, key=len, reverse=True)
+        escaped = [re.escape(token) for token in sorted_special_tokens]
         pattern = f"({'|'.join(escaped)})"  # Add parentheses to include special tokens
         chunks : list[str] = re.split(pattern = pattern, string = text)
 
@@ -114,7 +115,7 @@ class Tokenizer:
         ids: list[int]
     ) -> str:
         merged_bytes = b"".join(self.vocab[id] for id in ids)
-        merged_bytes.decode(encoding = 'utf-8', errors = 'replace')
+        return merged_bytes.decode(encoding = 'utf-8', errors = 'replace')
 
 
 def to_list(s: str) -> list[bytes]:
