@@ -45,11 +45,11 @@ class Tokenizer:
 
         Acts as an alternative constructor to load a pre-trained BPE model.
         """
-        with open(vocab_filepath, mode = 'r', encoding = 'utf-8') as f:
-            raw_vocab : dict[str, str] = json.load(f)
+        with open(vocab_filepath, mode='r', encoding='utf-8') as f:
+            raw_vocab: dict[str, str] = json.load(f)
             vocab = {int(k) : bytes.fromhex(v) for k, v in raw_vocab.items()}
 
-        with open(merges_filepath, mode = 'r', encoding = 'utf-8') as f:
+        with open(merges_filepath, mode='r', encoding='utf-8') as f:
             raw_merges : list[list[str]] = json.load(f)
             merges = [(bytes.fromhex(a), bytes.fromhex(b)) for a, b in raw_merges]
 
@@ -65,7 +65,7 @@ class Tokenizer:
             sorted_special_tokens = sorted(self.special_tokens, key=len, reverse=True)
             escaped = [re.escape(token) for token in sorted_special_tokens]
             pattern = f"({'|'.join(escaped)})"  # Add parentheses to include special tokens
-            chunks : list[str] = re.split(pattern = pattern, string = text)
+            chunks : list[str] = re.split(pattern=pattern, string=text)
         else:
             chunks = [text]
 
@@ -78,9 +78,9 @@ class Tokenizer:
                 vocab_id = self.inverse_vocab[chunk.encode('utf-8')]
                 result.append(vocab_id)
             else:
-                for pre_token in re.finditer(pattern = PAT, string = chunk):
+                for pre_token in re.finditer(pattern=PAT, string=chunk):
                     token_text = pre_token.group(0)
-                    token_list = [bytes([b]) for b in token_text.encode(encoding = 'utf-8')]
+                    token_list = [bytes([b]) for b in token_text.encode(encoding='utf-8')]
                     for a, b in self.merges:
                         if a not in token_list or b not in token_list:  # For efficiency
                             continue
@@ -118,5 +118,5 @@ class Tokenizer:
         ids: list[int]
     ) -> str:
         merged_bytes = b"".join(self.vocab[id] for id in ids)
-        return merged_bytes.decode(encoding = 'utf-8', errors = 'replace')
+        return merged_bytes.decode(encoding='utf-8', errors='replace')
 

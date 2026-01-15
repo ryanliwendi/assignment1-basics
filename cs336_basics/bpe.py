@@ -48,14 +48,14 @@ def train_bpe(
             next_id += 1
 
     # Step 2: Read Corpus
-    with open(input_path, mode = 'r', encoding = 'utf-8') as f:
+    with open(input_path, mode='r', encoding='utf-8') as f:
         text = f.read()
 
     # Step 3: Chunking and Removing Special Tokens
     if len(special_tokens) != 0:
         tokens_escaped = [re.escape(token) for token in special_tokens]
         pattern = '|'.join(tokens_escaped)
-        chunks: list[str] = re.split(pattern = pattern, string = text)
+        chunks: list[str] = re.split(pattern=pattern, string=text)
     else:
         chunks = [text]
 
@@ -64,9 +64,9 @@ def train_bpe(
     for chunk in chunks:
         if not chunk:
             continue
-        for pre_token in re.finditer(pattern = PAT, string = chunk):
+        for pre_token in re.finditer(pattern=PAT, string=chunk):
             token_text = pre_token.group(0)   # Obtain the matched substring from the match object
-            token_tuples = to_tuples(token_text)
+            token_tuples = tuple(bytes([b]) for b in token_text.encode(encoding = 'utf-8'))
             pre_tokens[token_tuples] += 1
 
     # Step 5: BPE Merging
@@ -103,18 +103,3 @@ def train_bpe(
             new_pre_tokens[updated_token] += count
         pre_tokens = new_pre_tokens
     return vocab, merges
-
-
-def to_tuples(s: str) -> tuple[bytes, ...]:
-    """
-    Converts a Unicode string into a tuple of single-byte symbols.
-
-    Args:
-        s (str): Input Unicode string (pre-token).
-
-    Returns:
-        tuple[bytes, ...]: A variable-length tuple where each element is a
-        single-byte `bytes` object representing the UTF-8 encoding of `s`.
-    """
-    encoded = s.encode(encoding = 'utf-8')
-    return tuple(bytes([b]) for b in encoded)
