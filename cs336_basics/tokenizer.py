@@ -32,8 +32,6 @@ class Tokenizer:
                 self.vocab[next_id] = token_encoded
                 self.inverse_vocab[token_encoded] = next_id
 
-
-
     @classmethod
     def from_files(
         cls,
@@ -55,7 +53,6 @@ class Tokenizer:
             merges = [(bytes.fromhex(a), bytes.fromhex(b)) for a, b in raw_merges]
 
         return cls(vocab, merges, special_tokens)
-
 
     def encode(
         self,
@@ -101,8 +98,6 @@ class Tokenizer:
                         result.append(vocab_id)
         return result
 
-
-
     def encode_iterable(
         self,
         iterable: Iterable[str]
@@ -111,8 +106,6 @@ class Tokenizer:
             encoded_text: list[int] = self.encode(chunk)
             # Yield from yields each element in encoded_text one by one
             yield from encoded_text
-
-
 
     def decode(
         self,
