@@ -1,14 +1,15 @@
 import json
 import regex as re
+from typing import Iterable, Iterator
 
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
 class Tokenizer:
     def __init__(
         self,
-        vocab : dict[int, bytes],
-        merges : list[tuple[bytes, bytes]],
-        special_tokens : list[str] = None
+        vocab: dict[int, bytes],
+        merges: list[tuple[bytes, bytes]],
+        special_tokens: list[str] = None
     ) -> None:
         self.vocab = vocab
         self.merges = merges
@@ -35,8 +36,8 @@ class Tokenizer:
     @classmethod
     def from_files(
         cls,
-        vocab_filepath : str,
-        merges_filepath : str,
+        vocab_filepath: str,
+        merges_filepath: str,
         special_tokens: None | list[str] = None
     ) -> 'Tokenizer':
         """
@@ -94,6 +95,26 @@ class Tokenizer:
                         vocab_id = self.inverse_vocab[element]
                         result.append(vocab_id)
         return result
+
+
+
+    def encode_iterable(
+        self,
+        iterable: Iterable[str]
+    ) -> Iterator[int]:
+        for chunk in iterable:
+            encoded_text: list[int] = self.encode(chunk)
+            # Yield from yields each element in encoded_text one by one
+            yield from encoded_text
+
+
+
+    def decode(
+        self,
+        ids: list[int]
+    ) -> str:
+        merged_bytes = b"".join(self.vocab[id] for id in ids)
+        merged_bytes.decode(encoding = 'utf-8', errors = 'replace')
 
 
 def to_list(s: str) -> list[bytes]:
