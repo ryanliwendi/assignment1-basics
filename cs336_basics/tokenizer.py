@@ -61,10 +61,13 @@ class Tokenizer:
         text: str
     ) -> list[int]:
         # Step 1: Chunk the string by special tokens
-        sorted_special_tokens = sorted(self.special_tokens, key=len, reverse=True)
-        escaped = [re.escape(token) for token in sorted_special_tokens]
-        pattern = f"({'|'.join(escaped)})"  # Add parentheses to include special tokens
-        chunks : list[str] = re.split(pattern = pattern, string = text)
+        if self.special_tokens:
+            sorted_special_tokens = sorted(self.special_tokens, key=len, reverse=True)
+            escaped = [re.escape(token) for token in sorted_special_tokens]
+            pattern = f"({'|'.join(escaped)})"  # Add parentheses to include special tokens
+            chunks : list[str] = re.split(pattern = pattern, string = text)
+        else:
+            chunks = [text]
 
         # Step 2: Pre-tokenizing, merging, and mapping to vocab_ids
         result : list[int] = []
@@ -77,7 +80,7 @@ class Tokenizer:
             else:
                 for pre_token in re.finditer(pattern = PAT, string = chunk):
                     token_text = pre_token.group(0)
-                    token_list = to_list(token_text)
+                    token_list = [bytes([b]) for b in token_text.encode(encoding = 'utf-8')]
                     for a, b in self.merges:
                         if a not in token_list or b not in token_list:  # For efficiency
                             continue
@@ -116,22 +119,4 @@ class Tokenizer:
     ) -> str:
         merged_bytes = b"".join(self.vocab[id] for id in ids)
         return merged_bytes.decode(encoding = 'utf-8', errors = 'replace')
-
-
-def to_list(s: str) -> list[bytes]:
-    """
-    Converts a Unicode string into a list of single-byte symbols.
-
-    Args:
-        s (str): Input Unicode string (pre-token).
-
-    Returns:
-        list[bytes]: A list where each element is a
-        single-byte `bytes` object representing the UTF-8 encoding of `s`.
-    """
-    encoded = s.encode(encoding = 'utf-8')
-    return [bytes([b]) for b in encoded]
-
-
-
 
