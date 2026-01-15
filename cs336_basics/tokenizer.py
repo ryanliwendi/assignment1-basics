@@ -1,8 +1,6 @@
 import json
 import regex as re
 
-from scripts.train_bpe_tinystories import special_tokens
-
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
 class Tokenizer:
