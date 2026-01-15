@@ -11,6 +11,7 @@ from cs336_basics import train_bpe
 import time
 import json
 
+
 data_path = '../data/openwebtext/owt_train.txt'
 output_path = '../outputs'
 max_vocab_size = 32000

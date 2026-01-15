@@ -2,6 +2,7 @@ import json
 import regex as re
 from typing import Iterable, Iterator
 
+
 PAT = r"""'(?:[sdmt]|ll|ve|re)| ?\p{L}+| ?\p{N}+| ?[^\s\p{L}\p{N}]+|\s+(?!\S)|\s+"""
 
 class Tokenizer:
