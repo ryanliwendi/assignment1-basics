@@ -54,10 +54,7 @@ class Tokenizer:
 
         return cls(vocab, merges, special_tokens)
 
-    def encode(
-        self,
-        text: str
-    ) -> list[int]:
+    def encode(self, text: str) -> list[int]:
         # Step 1: Chunk the string by special tokens
         if self.special_tokens:
             sorted_special_tokens = sorted(self.special_tokens, key=len, reverse=True)
@@ -98,19 +95,13 @@ class Tokenizer:
                         result.append(vocab_id)
         return result
 
-    def encode_iterable(
-        self,
-        iterable: Iterable[str]
-    ) -> Iterator[int]:
+    def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
         for chunk in iterable:
             encoded_text: list[int] = self.encode(chunk)
             # Yield from yields each element in encoded_text one by one
             yield from encoded_text
 
-    def decode(
-        self,
-        ids: list[int]
-    ) -> str:
+    def decode(self, ids: list[int]) -> str:
         merged_bytes = b"".join(self.vocab[id] for id in ids)
         return merged_bytes.decode(encoding='utf-8', errors='replace')
 
