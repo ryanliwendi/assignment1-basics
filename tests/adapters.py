@@ -8,7 +8,8 @@ import numpy.typing as npt
 import torch
 from jaxtyping import Bool, Float, Int
 from torch import Tensor
-from cs336_basics import train_bpe, Tokenizer, Linear, Embedding
+from cs336_basics import train_bpe, Tokenizer
+from cs336_basics import Linear, Embedding, RMSNorm, SwiGLU
 
 def run_linear(
     d_in: int,
@@ -93,7 +94,10 @@ def run_swiglu(
     # swiglu.w1.weight.data = w1_weight
     # swiglu.w2.weight.data = w2_weight
     # swiglu.w3.weight.data = w3_weight
-    raise NotImplementedError
+    swiglu_layer = SwiGLU(d_model, d_ff)
+    state_dict = {'W1.W' : w1_weight.T, 'W2.W' : w2_weight.T, 'W3.W' : w3_weight.T}
+    swiglu_layer.load_state_dict(state_dict)
+    return swiglu_layer(in_features)
 
 
 def run_scaled_dot_product_attention(
@@ -388,7 +392,10 @@ def run_rmsnorm(
         Float[Tensor,"... d_model"]: Tensor of with the same shape as `in_features` with the output of running
         RMSNorm of the `in_features`.
     """
-    raise NotImplementedError
+    rmsnorm_layer = RMSNorm(d_model=d_model, eps=eps)
+    state_dict = {'g' : weights}
+    rmsnorm_layer.load_state_dict(state_dict)
+    return rmsnorm_layer(in_features)
 
 
 def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
@@ -402,7 +409,7 @@ def run_silu(in_features: Float[Tensor, " ..."]) -> Float[Tensor, " ..."]:
         Float[Tensor,"..."]: of with the same shape as `in_features` with the output of applying
         SiLU to each element.
     """
-    raise NotImplementedError
+    return in_features * torch.sigmoid(in_features)
 
 
 def run_get_batch(

@@ -1,6 +1,8 @@
+from enum import Flag
+
 import torch
 import torch.nn as nn
-from einops import einsum
+from einops import einsum, reduce
 import math
 from torch import Tensor
 from jaxtyping import Float
@@ -56,3 +58,57 @@ class Embedding(nn.Module):
 
     def extra_repr(self) -> str:
         return f"vocab_size = {self.W.shape[0]}, hidden_dimension = {self.W.shape[1]}"
+
+
+class RMSNorm(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        eps: float = 1e-5,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None
+    ):
+        super().__init__()
+        self.g = nn.Parameter(torch.ones(d_model, device=device, dtype=dtype))
+        self.eps = eps
+
+    def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:
+        in_dtype = x.dtype
+        x = x.to(torch.float32)
+        squared_avg = reduce(x ** 2, "... d_model -> ... 1", 'mean')
+        rms : Float[Tensor, "... 1"] = torch.sqrt(squared_avg + self.eps)
+
+        # Note: In broadcasting, adding dimensions to the left is automatic,
+        # while adding dimensions to the right requires explicitly providing a
+        # dimension of size 1
+        result = x * self.g / rms
+        return result.to(in_dtype)
+
+
+class SwiGLU(nn.Module):
+    def __init__(
+        self,
+        d_model: int,
+        d_ff: int | None = None,
+        device: torch.device | None = None,
+        dtype: torch.dtype | None = None
+    ):
+        super().__init__()
+        if d_ff is None:
+            calculated_d_ff = d_model * 8 // 3
+            # Round up the dimensionality to a multiple of 64
+            self.d_ff = 64 * ((calculated_d_ff + 63) // 64)
+        else:
+            self.d_ff = d_ff
+
+        self.W1 = Linear(in_features=d_model, out_features=self.d_ff, device=device,dtype=dtype)
+        self.W2 = Linear(in_features=self.d_ff, out_features=d_model, device=device, dtype=dtype)
+        self.W3 = Linear(in_features=d_model, out_features=self.d_ff, device=device,dtype=dtype)
+
+    def SiLU(self, x: Float[Tensor, "... d_ff"]) -> Float[Tensor, "... d_ff"]:
+        return x * torch.sigmoid(x)
+
+    def forward(self, x: Float[Tensor, "... d_model"]) -> Float[Tensor, "... d_model"]:
+        activation = self.SiLU(self.W1(x))
+        gate = self.W3(x)
+        return self.W2(activation * gate)
