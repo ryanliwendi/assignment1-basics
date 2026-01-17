@@ -83,7 +83,7 @@ def train_bpe(
 
     # Step 6: Incremental BPE Merging
     merges: list[tuple[bytes, bytes]] = []
-    while next_id < vocab_size:
+    while next_id < vocab_size and pair_freq:
         max_cnt = max(pair_freq.values())
         max_pairs = [p for p in pair_freq if pair_freq[p] == max_cnt]
         max_pair = max(max_pairs)
@@ -99,7 +99,7 @@ def train_bpe(
         pair_loc.pop(max_pair)
         pair_freq.pop(max_pair)
 
-        new_pretoken_freq: dict[tuple[bytes, ...], int] = DefaultDict(int)  # Track all merged pre-tokens and their frequencies
+        new_pretoken_freq: dict[tuple[bytes, ...], int] = defaultdict(int)  # Track all merged pre-tokens and their frequencies
         for token in affected_tokens:
             count = pre_tokens[token]
             pre_tokens.pop(token)
@@ -113,12 +113,15 @@ def train_bpe(
                 else:
                     new_token.append(token[cur_pos])
                     cur_pos += 1
-            new_pretoken_freq[tuple(new_token)] = count
+            new_pretoken_freq[tuple(new_token)] += count
 
             for j in range(len(token) - 1):
                 old_pair = (token[j], token[j + 1])
                 pair_freq[old_pair] -= count
                 pair_loc[old_pair].discard(token)
+                if pair_freq[old_pair] == 0:
+                    pair_freq.pop(old_pair, None)
+                    pair_loc.pop(old_pair, None)
 
         # Add new pre-tokens information
         for token, count in new_pretoken_freq.items():
