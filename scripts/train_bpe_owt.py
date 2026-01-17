@@ -4,7 +4,7 @@ Train a BPE tokenizer on the OpenWebText dataset.
 Usage:
     cd scripts
     export PYTHONPATH=$PYTHONPATH:..
-    python train_bpe_tinystories.py
+    python train_bpe_owt.py
 """
 
 from cs336_basics import train_bpe
@@ -13,7 +13,7 @@ import json
 
 
 data_path = '../data/openwebtext/owt_train.txt'
-output_path = '../outputs'
+output_path = '../outputs/openwebtext'
 max_vocab_size = 32000
 special_tokens = ['<|endoftext|>']
 

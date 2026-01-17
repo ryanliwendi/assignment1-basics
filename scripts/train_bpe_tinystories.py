@@ -12,7 +12,7 @@ import time
 import json
 
 data_path = '../data/tinystories/TinyStories-train.txt'
-output_path = '../outputs'
+output_path = '../outputs/tinystories'
 max_vocab_size = 10000
 special_tokens = ['<|endoftext|>']
 
