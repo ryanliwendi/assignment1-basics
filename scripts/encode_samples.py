@@ -4,7 +4,6 @@ import time
 
 
 def analyze_tokenizer(name, data_path, vocab_path, merges_path, special_tokens):
-
     with open(data_path, 'r', encoding='utf-8') as f:
         # Count number of bytes
         f.seek(0, os.SEEK_END)
