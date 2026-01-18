@@ -1,5 +1,3 @@
-from enum import Flag
-
 import torch
 import torch.nn as nn
 from einops import einsum, reduce
@@ -15,7 +13,7 @@ class Linear(nn.Module):
         out_features: int,
         device: torch.device | None = None,
         dtype: torch.dtype | None = None
-    ) -> None:
+    ):
         super().__init__()
         self.W: Float[Tensor, "d_in d_out"] = nn.Parameter(
             torch.empty(
@@ -112,3 +110,55 @@ class SwiGLU(nn.Module):
         activation = self.SiLU(self.W1(x))
         gate = self.W3(x)
         return self.W2(activation * gate)
+
+
+class RotaryPositionalEmbedding(nn.Module):
+    def __init__(
+        self,
+        theta: float,
+        d_k: int,
+        max_seq_len: int,
+        device: torch.device | None = None
+    ):
+        super().__init__()
+
+        assert d_k % 2 == 0
+        self.d_k = d_k
+        self.max_seq_len = max_seq_len
+        buffer_cos = torch.empty((self.max_seq_len, self.d_k // 2), device=device)
+        buffer_sin = torch.empty((self.max_seq_len, self.d_k // 2), device=device)
+        for i in range(self.max_seq_len):
+            for k in range(self.d_k // 2):
+                angle = i / (theta ** (2 * k / self.d_k))
+                buffer_cos[i, k] = math.cos(angle)
+                buffer_sin[i, k] = math.sin(angle)
+        self.register_buffer('cos', buffer_cos, persistent=False)
+        self.register_buffer('sin', buffer_sin, persistent=False)
+
+    def forward(
+        self,
+        x: Float[Tensor, "... seq_len d_k"],
+        token_positions: Float[Tensor, "... seq_len"]
+    ) -> Float[Tensor, "... seq_len d_k"]:
+        x_even: Float[Tensor, "... seq_len d_k / 2"] = x[..., 0::2]  # Slice based on last dimension
+        x_odd: Float[Tensor, "... seq_len d_k / 2"] = x[..., 1::2]
+
+        sin_values: Float[Tensor, "... seq_len d_k / 2"] = self.sin[token_positions]
+        cos_values: Float[Tensor, "... seq_len d_k / 2"] = self.cos[token_positions]
+
+        # Apply rotations
+        even_rot = cos_values * x_even - sin_values * x_odd
+        odd_rot = sin_values * x_even + cos_values * x_odd
+
+        out = torch.empty_like(x)
+        out[..., 0::2] = even_rot
+        out[..., 1::2] = odd_rot
+        return out
+
+
+
+
+
+
+
+
