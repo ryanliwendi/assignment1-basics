@@ -43,6 +43,7 @@ analyze_tokenizer(
     merges_path="../outputs/tinystories/merges.json",
     special_tokens=special_tokens
 )
+print()
 
 # Run for OpenWebText
 analyze_tokenizer(
@@ -52,6 +53,7 @@ analyze_tokenizer(
     merges_path="../outputs/openwebtext/merges.json",
     special_tokens=special_tokens
 )
+print()
 
 # Run OpenWebText sample on TinyStories tokenizer
 analyze_tokenizer(
