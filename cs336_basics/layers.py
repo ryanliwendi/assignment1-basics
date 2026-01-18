@@ -3,7 +3,7 @@ import torch.nn as nn
 from einops import einsum, reduce
 import math
 from torch import Tensor
-from jaxtyping import Float
+from jaxtyping import Float, Int
 
 
 class Linear(nn.Module):
@@ -138,13 +138,13 @@ class RotaryPositionalEmbedding(nn.Module):
     def forward(
         self,
         x: Float[Tensor, "... seq_len d_k"],
-        token_positions: Float[Tensor, "... seq_len"]
+        token_positions: Int[Tensor, "... seq_len"]
     ) -> Float[Tensor, "... seq_len d_k"]:
-        x_even: Float[Tensor, "... seq_len d_k / 2"] = x[..., 0::2]  # Slice based on last dimension
-        x_odd: Float[Tensor, "... seq_len d_k / 2"] = x[..., 1::2]
+        x_even: Float[Tensor, "... seq_len d_k // 2"] = x[..., 0::2]  # Slice based on last dimension
+        x_odd: Float[Tensor, "... seq_len d_k // 2"] = x[..., 1::2]
 
-        sin_values: Float[Tensor, "... seq_len d_k / 2"] = self.sin[token_positions]
-        cos_values: Float[Tensor, "... seq_len d_k / 2"] = self.cos[token_positions]
+        sin_values: Float[Tensor, "... seq_len d_k // 2"] = self.sin[token_positions]
+        cos_values: Float[Tensor, "... seq_len d_k // 2"] = self.cos[token_positions]
 
         # Apply rotations
         even_rot = cos_values * x_even - sin_values * x_odd
@@ -154,8 +154,6 @@ class RotaryPositionalEmbedding(nn.Module):
         out[..., 0::2] = even_rot
         out[..., 1::2] = odd_rot
         return out
-
-
 
 
 
