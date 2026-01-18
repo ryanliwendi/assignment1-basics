@@ -25,6 +25,12 @@ class Tokenizer:
         # Maintain a vocabulary mapping bytes to vocab_ids
         self.inverse_vocab: dict[bytes, int] = {v: k for k, v in vocab.items()}
 
+        # Maintain a cache of results mapping from word
+        self.cache: dict[str, list[int]] = {}
+
+        # Rank the merges
+        self.merge_rank: dict[tuple[bytes, bytes], int] = {merge : i for i, merge in enumerate(merges)}
+
         for token in self.special_tokens:
             token_encoded = token.encode('utf-8')
             if token_encoded not in self.inverse_vocab:
@@ -75,24 +81,38 @@ class Tokenizer:
             else:
                 for pre_token in re.finditer(pattern=PAT, string=chunk):
                     token_text = pre_token.group(0)
+                    if token_text in self.cache:
+                        result.extend(self.cache[token_text])
+                        continue
                     token_list = [bytes([b]) for b in token_text.encode(encoding='utf-8')]
-                    for a, b in self.merges:
-                        if a not in token_list or b not in token_list:  # For efficiency
-                            continue
+                    while len(token_list) > 1:
+                        best_pair = None
+                        best_rank = float("inf")
+
+                        for i in range(len(token_list) - 1):
+                            pair = (token_list[i], token_list[i + 1])
+                            rank = self.merge_rank.get(pair)
+                            if rank is not None and rank < best_rank:
+                                best_pair = pair
+                                best_rank = self.merge_rank[pair]
+
+                        if best_pair is None:
+                            break
+
                         out: list[bytes] = []
                         idx = 0
                         while idx < len(token_list):
-                            if idx + 1 < len(token_list) and (token_list[idx], token_list[idx + 1]) == (a, b):
-                                new_token = a + b
+                            if idx + 1 < len(token_list) and (token_list[idx], token_list[idx + 1]) == best_pair:
+                                new_token = best_pair[0] + best_pair[1]
                                 out.append(new_token)
                                 idx += 2
                             else:
                                 out.append(token_list[idx])
                                 idx += 1
                         token_list = out
-                    for element in token_list:
-                        vocab_id = self.inverse_vocab[element]
-                        result.append(vocab_id)
+                    ids = [self.inverse_vocab[element] for element in token_list]
+                    self.cache[token_text] = ids
+                    result.extend(ids)
         return result
 
     def encode_iterable(self, iterable: Iterable[str]) -> Iterator[int]:
