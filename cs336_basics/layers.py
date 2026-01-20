@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from einops import einsum, reduce
+from einops import einsum, reduce, rearrange
 import math
 from torch import Tensor
 from jaxtyping import Float, Int, Bool
@@ -181,28 +181,54 @@ def scaled_dot_product_attention(
 
 
 class MultiheadSelfAttention(nn.Module):
-    def __init__(self, d_model: int, num_heads: int):
+    def __init__(self,
+        d_model: int,
+        num_heads: int,
+        rope: RotaryPositionalEmbedding | None = None
+    ):
         super().__init__()
 
         self.d_model = d_model
         self.num_heads = num_heads
 
         self.d_k = self.d_model // self.num_heads
-        std_qk = math.sqrt(2 / (self.d_model + self.d_k * self.num_heads))
-        self.W_Q = nn.Parameter(torch.empty((self.num_heads * self.d_k, self.d_model)))
-        nn.init.trunc_normal_(self.W_Q, mean=0, std=std_qk, a=-3 * std_qk, b=3 * std_qk)
-        self.W_K = nn.Parameter(torch.empty((self.num_heads * self.d_k, self.d_model)))
-        nn.init.trunc_normal_(self.W_Q, mean=0, std=std_qk, a=-3 * std_qk, b=3 * std_qk)
-
         self.d_v = self.d_model // self.num_heads
-        std_v = math.sqrt(2 / (self.d_model + self.d_v * self.num_heads))
-        self.W_V = nn.Parameter(torch.empty((self.num_heads * self.d_v, self.d_model)))
-        nn.init.trunc_normal_(self.W_V, mean=0, std=std_v, a=-3 * std_v, b=3 * std_v)
-        self.W_O = nn.Parameter(torch.empty((self.d_model, self.num_heads * self.d_v)))
-        nn.init.trunc_normal_(self.W_O, mean=0, std=std_v, a=-3 * std_v, b=3 * std_v)
 
-    def forward(self):
-        raise NotImplementedError
+        self.W_Q = Linear(self.d_model,self.num_heads * self.d_k)
+        self.W_K = Linear(self.d_model,self.num_heads * self.d_k)
+        self.W_V = Linear(self.d_model,self.num_heads * self.d_v)
+
+        self.W_O = Linear(self.num_heads * self.d_v, self.d_model)
+        self.rope = rope
+
+
+    def forward(self,
+        x: Float[Tensor, "... seq_len d_model"],
+        token_positions: Int[Tensor, " ... sequence_length"] | None = None
+    ) -> Float[Tensor, "... seq_len d_model"]:
+        *batch, seq_len, d_model = x.shape
+
+        Q = self.W_Q(x)
+        K = self.W_K(x)
+        V = self.W_V(x)
+
+        Q = rearrange(Q, "... seq_len (heads d_k) -> ... heads seq_len d_k", heads=self.num_heads)
+        K = rearrange(K, "... seq_len (heads d_k) -> ... heads seq_len d_k", heads=self.num_heads)
+        V = rearrange(V, "... seq_len (heads d_v) -> ... heads seq_len d_v", heads=self.num_heads)
+
+        if self.rope is not None:
+            if token_positions is None:
+                token_positions = torch.arange(seq_len, device=x.device)
+            Q = self.rope(Q, token_positions)
+            K = self.rope(K, token_positions)
+
+        mask = torch.tril(torch.ones(seq_len, seq_len, dtype=torch.bool, device=x.device))
+        outputs = scaled_dot_product_attention(Q, K, V, mask)
+
+        outputs = rearrange(outputs, "... heads seq_len dv -> ... seq_len (heads dv)")
+        return self.W_O(outputs)
+
+
 
 
 
