@@ -3,7 +3,7 @@ import torch.nn as nn
 from einops import einsum, reduce
 import math
 from torch import Tensor
-from jaxtyping import Float, Int
+from jaxtyping import Float, Int, Bool
 
 
 class Linear(nn.Module):
@@ -164,6 +164,45 @@ def softmax(x: Tensor, dim: int) -> Tensor:
     sum_exp_x = torch.sum(exp_x, dim=dim, keepdim=True)
 
     return exp_x / sum_exp_x
+
+
+def scaled_dot_product_attention(
+    q: Float[Tensor, "... seq_len d_k"],
+    k: Float[Tensor, "... seq_len d_k"],
+    v: Float[Tensor, "... seq_len d_v"],
+    mask: Bool[Tensor, "seq_len seq_len"] | None = None
+) -> Float[Tensor, "... seq_len d_v"]:
+    scores = einsum(q, k, "... q d_k, ... k d_k -> ... q k")
+    scores /= math.sqrt(q.shape[-1])
+    if mask is not None:
+        scores = torch.where(mask, scores, float('-inf'))
+    scores_normalized = softmax(scores, dim=-1)
+    return einsum(scores_normalized, v, "... q k, ... k d_v -> ... q d_v")
+
+
+class MultiheadSelfAttention(nn.Module):
+    def __init__(self, d_model: int, num_heads: int):
+        super().__init__()
+
+        self.d_model = d_model
+        self.num_heads = num_heads
+
+        self.d_k = self.d_model // self.num_heads
+        std_qk = math.sqrt(2 / (self.d_model + self.d_k * self.num_heads))
+        self.W_Q = nn.Parameter(torch.empty((self.num_heads * self.d_k, self.d_model)))
+        nn.init.trunc_normal_(self.W_Q, mean=0, std=std_qk, a=-3 * std_qk, b=3 * std_qk)
+        self.W_K = nn.Parameter(torch.empty((self.num_heads * self.d_k, self.d_model)))
+        nn.init.trunc_normal_(self.W_Q, mean=0, std=std_qk, a=-3 * std_qk, b=3 * std_qk)
+
+        self.d_v = self.d_model // self.num_heads
+        std_v = math.sqrt(2 / (self.d_model + self.d_v * self.num_heads))
+        self.W_V = nn.Parameter(torch.empty((self.num_heads * self.d_v, self.d_model)))
+        nn.init.trunc_normal_(self.W_V, mean=0, std=std_v, a=-3 * std_v, b=3 * std_v)
+        self.W_O = nn.Parameter(torch.empty((self.d_model, self.num_heads * self.d_v)))
+        nn.init.trunc_normal_(self.W_O, mean=0, std=std_v, a=-3 * std_v, b=3 * std_v)
+
+    def forward(self):
+        raise NotImplementedError
 
 
 
