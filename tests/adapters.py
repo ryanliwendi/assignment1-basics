@@ -11,7 +11,7 @@ from torch import Tensor
 from cs336_basics import train_bpe, Tokenizer
 from cs336_basics import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
 from cs336_basics import softmax, scaled_dot_product_attention
-from cs336_basics import MultiheadSelfAttention
+from cs336_basics import MultiheadSelfAttention, TransformerBlock
 
 def run_linear(
     d_in: int,
@@ -298,7 +298,36 @@ def run_transformer_block(
         Float[Tensor, "batch sequence_length d_model"] Tensor with the output of
         running the Transformer block on the input features while using RoPE.
     """
-    raise NotImplementedError
+    key_mapping = {
+        'attn.q_proj.weight' : 'attn.W_Q.W',
+        'attn.k_proj.weight': 'attn.W_K.W',
+        'attn.v_proj.weight': 'attn.W_V.W',
+        'attn.output_proj.weight': 'attn.W_O.W',
+        'ln1.weight': 'attn_norm.g',
+        'ffn.w1.weight': 'ffn.W1.W',
+        'ffn.w2.weight': 'ffn.W2.W',
+        'ffn.w3.weight': 'ffn.W3.W',
+        'ln2.weight': 'ffn_norm.g'
+    }
+
+    transpose_keys = {
+        'attn.q_proj.weight',
+        'attn.k_proj.weight',
+        'attn.v_proj.weight',
+        'attn.output_proj.weight',
+        'ffn.w1.weight',
+        'ffn.w2.weight',
+        'ffn.w3.weight'
+    }
+
+    remapped_weights = {key_mapping[k]: v.T if k in transpose_keys else v
+                        for k, v in weights.items()}
+
+    d_k = d_model // num_heads
+    rope_layer = RotaryPositionalEmbedding(theta=theta, d_k=d_k, max_seq_len=max_seq_len)
+    transformer_block_layer = TransformerBlock(d_model=d_model, num_heads=num_heads, d_ff=d_ff, rope=rope_layer)
+    transformer_block_layer.load_state_dict(remapped_weights)
+    return transformer_block_layer(in_features)
 
 
 def run_transformer_lm(

@@ -204,7 +204,7 @@ class MultiheadSelfAttention(nn.Module):
 
     def forward(self,
         x: Float[Tensor, "... seq_len d_model"],
-        token_positions: Int[Tensor, " ... sequence_length"] | None = None
+        token_positions: Int[Tensor, " ... seq_len"] | None = None
     ) -> Float[Tensor, "... seq_len d_model"]:
         *batch, seq_len, d_model = x.shape
 
@@ -229,7 +229,28 @@ class MultiheadSelfAttention(nn.Module):
         return self.W_O(outputs)
 
 
+class TransformerBlock(nn.Module):
+    def __init__(self,
+        d_model: int,
+        num_heads: int,
+        d_ff: int,
+        rope: RotaryPositionalEmbedding | None = None
+    ):
+        super().__init__()
 
+        self.attn = MultiheadSelfAttention(d_model, num_heads, rope)
+        self.attn_norm = RMSNorm(d_model)
+        self.ffn = SwiGLU(d_model, d_ff)
+        self.ffn_norm = RMSNorm(d_model)
+
+    def forward(
+        self,
+        x: Float[Tensor, ".. d_model"],
+        token_positions: Float[Tensor, "... seq_len"] | None = None
+    ):
+        x = x + self.attn(self.attn_norm(x), token_positions)
+        x = x + self.ffn(self.ffn_norm(x))
+        return x
 
 
 

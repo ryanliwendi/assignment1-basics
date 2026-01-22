@@ -6,4 +6,4 @@ from .bpe import train_bpe
 from .tokenizer import Tokenizer
 from .layers import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
 from .layers import softmax, scaled_dot_product_attention
-from .layers import MultiheadSelfAttention
+from .layers import MultiheadSelfAttention, TransformerBlock
