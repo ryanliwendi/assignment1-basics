@@ -11,7 +11,7 @@ from torch import Tensor
 from cs336_basics import train_bpe, Tokenizer
 from cs336_basics import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
 from cs336_basics import softmax, scaled_dot_product_attention
-from cs336_basics import MultiheadSelfAttention, TransformerBlock
+from cs336_basics import MultiheadSelfAttention, TransformerBlock, TransformerLM
 
 def run_linear(
     d_in: int,
@@ -409,7 +409,37 @@ def run_transformer_lm(
         Float[Tensor, "batch_size sequence_length vocab_size"]: Tensor with the predicted unnormalized
         next-word distribution for each token.
     """
-    raise NotImplementedError
+    transformer_layer = TransformerLM(
+        vocab_size=vocab_size,
+        context_length=context_length,
+        num_layers=num_layers,
+        num_heads=num_heads,
+        d_model=d_model,
+        d_ff=d_ff,
+        theta=rope_theta
+    )
+
+    remapped_weights = {}
+    for k, v in weights.items():
+        new_key = (k.replace('token_embeddings.weight', 'embedding.W')
+                   .replace('layers.','transformer_blocks.')
+                   .replace('attn.q_proj.weight', 'attn.W_Q.W')
+                   .replace('attn.k_proj.weight', 'attn.W_K.W')
+                   .replace('attn.v_proj.weight', 'attn.W_V.W')
+                   .replace('attn.output_proj.weight', 'attn.W_O.W')
+                   .replace('ln1.weight', 'attn_norm.g')
+                   .replace('ffn.w1.weight', 'ffn.W1.W')
+                   .replace('ffn.w2.weight', 'ffn.W2.W')
+                   .replace('ffn.w3.weight', 'ffn.W3.W')
+                   .replace('ln2.weight', 'ffn_norm.g')
+                   .replace('ln_final.weight', 'final_norm.g')
+                   .replace('lm_head.weight', 'lm_head.W'))
+
+        needs_transpose = 'proj.weight' in k or 'ffn.w' in k or 'lm_head' in k
+        remapped_weights[new_key] = v.T if needs_transpose else v
+
+    transformer_layer.load_state_dict(remapped_weights)
+    return transformer_layer(in_indices)
 
 
 def run_rmsnorm(

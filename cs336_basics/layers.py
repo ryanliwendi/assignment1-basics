@@ -253,4 +253,38 @@ class TransformerBlock(nn.Module):
         return x
 
 
+class TransformerLM(nn.Module):
+    def __init__(
+        self,
+        vocab_size: int,
+        context_length: int,
+        num_layers: int,
+        num_heads: int,
+        d_model: int,
+        d_ff: int,
+        theta: float
+    ):
+        super().__init__()
+
+        self.rope = RotaryPositionalEmbedding(theta, d_model // num_heads, context_length)
+
+        self.embedding = Embedding(vocab_size, d_model)
+        self.transformer_blocks = nn.ModuleList([
+            TransformerBlock(d_model, num_heads, d_ff, self.rope)
+            for _ in range(num_layers)
+        ])
+        self.final_norm = RMSNorm(d_model)
+        self.lm_head = Linear(d_model, vocab_size)
+
+    def forward(
+        self,
+        token_ids: Int[Tensor, "batch_size sequence_length"],
+        token_positions: Float[Tensor, "... seq_len"] | None = None
+    ):
+        x = self.embedding(token_ids)
+        for block in self.transformer_blocks:
+            x = block(x, token_positions)
+        x = self.final_norm(x)
+        return self.lm_head(x)
+
 
