@@ -8,10 +8,12 @@ import numpy.typing as npt
 import torch
 from jaxtyping import Bool, Float, Int
 from torch import Tensor
-from cs336_basics import train_bpe, Tokenizer
-from cs336_basics import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
-from cs336_basics import softmax, scaled_dot_product_attention
-from cs336_basics import MultiheadSelfAttention, TransformerBlock, TransformerLM
+from cs336_basics.bpe import train_bpe
+from cs336_basics.tokenizer import Tokenizer
+from cs336_basics.model import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
+from cs336_basics.model import softmax, scaled_dot_product_attention
+from cs336_basics.model import MultiheadSelfAttention, TransformerBlock, TransformerLM
+from cs336_basics.train import cross_entropy
 
 def run_linear(
     d_in: int,
@@ -354,7 +356,7 @@ def run_transformer_lm(
         num_heads (int): Number of heads to use in multi-headed attention. `d_model` must be
             evenly divisible by `num_heads`.
         d_ff (int): Dimensionality of the feed-forward inner layer (section 3.3).
-        rope_theta (float): The RoPE $\Theta$ parameter.
+        rope_theta (float): The RoPE $\theta$ parameter.
         weights (dict[str, Tensor]):
             State dict of our reference implementation. {num_layers} refers to an
             integer between `0` and `num_layers - 1` (the layer index).
@@ -419,6 +421,7 @@ def run_transformer_lm(
         theta=rope_theta
     )
 
+    # Requires dynamic remapping since the number of transformer layers is variable
     remapped_weights = {}
     for k, v in weights.items():
         new_key = (k.replace('token_embeddings.weight', 'embedding.W')
@@ -536,7 +539,7 @@ def run_cross_entropy(
     Returns:
         Float[Tensor, ""]: The average cross-entropy loss across examples.
     """
-    raise NotImplementedError
+    return cross_entropy(inputs, targets)
 
 
 def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm: float) -> None:
