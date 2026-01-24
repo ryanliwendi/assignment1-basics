@@ -51,7 +51,7 @@ class Embedding(nn.Module):
         std = 1
         nn.init.trunc_normal_(self.W, mean=0.0, std=std, a=-3, b=3)
 
-    def forward(self, token_ids: Float[Tensor, "..."]) -> Float[Tensor, "... d_model"]:
+    def forward(self, token_ids: Int[Tensor, "..."]) -> Float[Tensor, "... d_model"]:
         return self.W[token_ids]
 
     def extra_repr(self) -> str:
@@ -245,8 +245,8 @@ class TransformerBlock(nn.Module):
 
     def forward(
         self,
-        x: Float[Tensor, ".. d_model"],
-        token_positions: Float[Tensor, "... seq_len"] | None = None
+        x: Float[Tensor, "... d_model"],
+        token_positions: Int[Tensor, "... seq_len"] | None = None
     ):
         x = x + self.attn(self.attn_norm(x), token_positions)
         x = x + self.ffn(self.ffn_norm(x))
@@ -279,7 +279,7 @@ class TransformerLM(nn.Module):
     def forward(
         self,
         token_ids: Int[Tensor, "batch_size sequence_length"],
-        token_positions: Float[Tensor, "... seq_len"] | None = None
+        token_positions: Int[Tensor, "... seq_len"] | None = None
     ):
         x = self.embedding(token_ids)
         for block in self.transformer_blocks:

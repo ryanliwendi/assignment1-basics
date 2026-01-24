@@ -4,6 +4,6 @@ __version__ = importlib.metadata.version("cs336_basics")
 
 from .bpe import train_bpe
 from .tokenizer import Tokenizer
-from .layers import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
-from .layers import softmax, scaled_dot_product_attention
-from .layers import MultiheadSelfAttention, TransformerBlock, TransformerLM
+from .model import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
+from .model import softmax, scaled_dot_product_attention
+from .model import MultiheadSelfAttention, TransformerBlock, TransformerLM
