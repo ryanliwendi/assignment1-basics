@@ -1,4 +1,5 @@
 from typing import Optional, Callable
+from collections.abc import Iterable
 
 import torch
 from torch import Tensor
@@ -70,10 +71,27 @@ class AdamW(Optimizer):
                 state['v'] = v
         return loss
 
-def learning_schedule(t, alpha_max, alpha_min, t_warm, t_cos):
+
+def learning_schedule(t, alpha_max, alpha_min, t_warm, t_cos) -> float:
     if t < t_warm:
         return t / t_warm * alpha_max
     elif t_warm <= t <= t_cos:
         return alpha_min + 0.5 * (1 + math.cos(math.pi * (t - t_warm) / (t_cos - t_warm))) * (alpha_max - alpha_min)
     else:
         return alpha_min
+
+
+def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_norm: float, eps = 1e-6) -> None:
+    total_norm_sq = 0.0
+    grads = []
+    for p in parameters:
+        if p.grad is not None:
+            total_norm_sq += (p.grad ** 2).sum()
+            grads.append(p.grad)
+
+    total_norm = math.sqrt(total_norm_sq)
+
+    if total_norm > max_norm:
+        scale = max_norm / (total_norm + eps)
+        for g in grads:
+            g *= scale

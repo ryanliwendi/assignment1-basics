@@ -13,7 +13,7 @@ from cs336_basics.tokenizer import Tokenizer
 from cs336_basics.model import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
 from cs336_basics.model import softmax, scaled_dot_product_attention
 from cs336_basics.model import MultiheadSelfAttention, TransformerBlock, TransformerLM
-from cs336_basics.train import cross_entropy, AdamW, learning_schedule
+from cs336_basics.train import cross_entropy, AdamW, learning_schedule, gradient_clipping
 
 def run_linear(
     d_in: int,
@@ -551,7 +551,7 @@ def run_gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_l2_norm:
 
     The gradients of the parameters (parameter.grad) should be modified in-place.
     """
-    raise NotImplementedError
+    return gradient_clipping(parameters, max_l2_norm)
 
 
 def get_adamw_cls() -> Any:
