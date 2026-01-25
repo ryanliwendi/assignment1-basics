@@ -1,5 +1,7 @@
-from typing import Optional, Callable
-from collections.abc import Iterable
+from typing import Optional, Callable, Iterable
+import typing
+import math
+import os
 
 import torch
 from torch import Tensor
@@ -8,14 +10,22 @@ from jaxtyping import Float, Int
 from einops import reduce
 import numpy as np
 import numpy.typing as npt
-import math
-import typing, os
 
 
 def cross_entropy(
     logits: Float[Tensor, "... vocab_size"],
     targets: Int[Tensor, "..."]
 ) -> Float[Tensor, ""]:
+    """
+    Computes mean cross-entropy loss with numerical stabilization.
+
+    Args:
+        logits: Unnormalized scores (..., vocab_size)
+        targets: Target indices with shape (...)
+
+    Returns:
+        Scalar mean loss.
+    """
     max_logits: Float[Tensor, "... 1"] = reduce(logits, "... vocab_size -> ... 1", reduction='max')
     stabilized_logits = logits - max_logits
 
@@ -40,7 +50,7 @@ class AdamW(Optimizer):
         if eps < 0:
             raise ValueError(f"Invalid epsilon value: {eps}")
         if weight_decay < 0:
-            raise ValueError(f"Invalid lambda value: {weight_decay}")
+            raise ValueError(f"Invalid weight decay value: {weight_decay}")
 
         defaults = {'lr': lr, 'beta1': beta1, 'beta2': beta2, 'eps': eps, 'weight_decay': weight_decay}
         super().__init__(params, defaults)
@@ -75,7 +85,18 @@ class AdamW(Optimizer):
         return loss
 
 
-def learning_schedule(t, alpha_max, alpha_min, t_warm, t_cos) -> float:
+def learning_schedule(
+    t: int,
+    alpha_max: float,
+    alpha_min: float,
+    t_warm: int,
+    t_cos: int
+) -> float:
+    """
+    Linear warmup followed by cosine decay.
+    """
+    assert t_warm < t_cos
+
     if t < t_warm:
         return t / t_warm * alpha_max
     elif t_warm <= t <= t_cos:
@@ -84,7 +105,14 @@ def learning_schedule(t, alpha_max, alpha_min, t_warm, t_cos) -> float:
         return alpha_min
 
 
-def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_norm: float, eps = 1e-6) -> None:
+def gradient_clipping(
+    parameters: Iterable[torch.nn.Parameter],
+    max_norm: float,
+    eps = 1e-6
+) -> None:
+    """
+    Clips gradients by global L2 norm.
+    """
     total_norm_sq = 0.0
     grads = []
     for p in parameters:
@@ -101,6 +129,9 @@ def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_norm: float,
 
 
 def get_batch(x: npt.NDArray[np.uint16], batch_size: int, context_len: int, device: str):
+    """
+    Samples random contiguous subsequences for language modeling.
+    """
     N = len(x)
     batch_positions = np.random.randint(0, N - context_len, batch_size)
     inputs = np.stack([x[pos: pos + context_len] for pos in batch_positions])
@@ -114,6 +145,9 @@ def save_checkpoint(
     iteration: int,
     out: str | os.PathLike | typing.BinaryIO | typing.IO[bytes]
 ):
+    """
+    Saves model/optimizer state.
+    """
     obj = {
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
@@ -126,7 +160,10 @@ def load_checkpoint(
     src: str | os.PathLike | typing.BinaryIO | typing.IO[bytes],
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer
-):
+) -> int:
+    """
+    Loads checkpoint and returns iteration number.
+    """
     obj = torch.load(src)
     model.load_state_dict(obj['model'])
     optimizer.load_state_dict(obj['optimizer'])
