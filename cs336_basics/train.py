@@ -127,7 +127,12 @@ def gradient_clipping(
             g *= scale
 
 
-def get_batch(x: npt.NDArray[np.uint16], batch_size: int, context_len: int, device: str):
+def get_batch(
+    x: npt.NDArray[np.uint16],
+    batch_size: int,
+    context_len: int,
+    device: str
+) -> tuple[Tensor, Tensor]:
     """
     Samples random contiguous subsequences for language modeling.
     """
@@ -144,7 +149,7 @@ def save_checkpoint(
     optimizer: torch.optim.Optimizer,
     iteration: int,
     out: str | os.PathLike | typing.BinaryIO | typing.IO[bytes]
-):
+) -> None:
     obj = {
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
