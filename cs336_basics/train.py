@@ -70,4 +70,10 @@ class AdamW(Optimizer):
                 state['v'] = v
         return loss
 
-
+def learning_schedule(t, alpha_max, alpha_min, t_warm, t_cos):
+    if t < t_warm:
+        return t / t_warm * alpha_max
+    elif t_warm <= t <= t_cos:
+        return alpha_min + 0.5 * (1 + math.cos(math.pi * (t - t_warm) / (t_cos - t_warm))) * (alpha_max - alpha_min)
+    else:
+        return alpha_min

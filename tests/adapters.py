@@ -13,7 +13,7 @@ from cs336_basics.tokenizer import Tokenizer
 from cs336_basics.model import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
 from cs336_basics.model import softmax, scaled_dot_product_attention
 from cs336_basics.model import MultiheadSelfAttention, TransformerBlock, TransformerLM
-from cs336_basics.train import cross_entropy, AdamW
+from cs336_basics.train import cross_entropy, AdamW, learning_schedule
 
 def run_linear(
     d_in: int,
@@ -586,7 +586,13 @@ def run_get_lr_cosine_schedule(
     Returns:
         Learning rate at the given iteration under the specified schedule.
     """
-    raise NotImplementedError
+    return learning_schedule(
+        t=it,
+        alpha_max=max_learning_rate,
+        alpha_min=min_learning_rate,
+        t_warm=warmup_iters,
+        t_cos=cosine_cycle_iters
+    )
 
 
 def run_save_checkpoint(
