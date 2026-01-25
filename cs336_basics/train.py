@@ -26,6 +26,7 @@ def cross_entropy(
     Returns:
         Scalar mean loss.
     """
+
     max_logits: Float[Tensor, "... 1"] = reduce(logits, "... vocab_size -> ... 1", reduction='max')
     stabilized_logits = logits - max_logits
 
@@ -92,9 +93,6 @@ def learning_schedule(
     t_warm: int,
     t_cos: int
 ) -> float:
-    """
-    Linear warmup followed by cosine decay.
-    """
     assert t_warm < t_cos
 
     if t < t_warm:
@@ -113,6 +111,7 @@ def gradient_clipping(
     """
     Clips gradients by global L2 norm.
     """
+
     total_norm_sq = 0.0
     grads = []
     for p in parameters:
@@ -132,6 +131,7 @@ def get_batch(x: npt.NDArray[np.uint16], batch_size: int, context_len: int, devi
     """
     Samples random contiguous subsequences for language modeling.
     """
+
     N = len(x)
     batch_positions = np.random.randint(0, N - context_len, batch_size)
     inputs = np.stack([x[pos: pos + context_len] for pos in batch_positions])
@@ -145,9 +145,6 @@ def save_checkpoint(
     iteration: int,
     out: str | os.PathLike | typing.BinaryIO | typing.IO[bytes]
 ):
-    """
-    Saves model/optimizer state.
-    """
     obj = {
         'model': model.state_dict(),
         'optimizer': optimizer.state_dict(),
@@ -161,9 +158,6 @@ def load_checkpoint(
     model: torch.nn.Module,
     optimizer: torch.optim.Optimizer
 ) -> int:
-    """
-    Loads checkpoint and returns iteration number.
-    """
     obj = torch.load(src)
     model.load_state_dict(obj['model'])
     optimizer.load_state_dict(obj['optimizer'])

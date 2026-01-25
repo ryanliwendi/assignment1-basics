@@ -22,14 +22,12 @@ class Linear(nn.Module):
                 dtype=dtype
             )
         )
-        std = math.sqrt(2 / (in_features + out_features))
-        nn.init.trunc_normal_(self.W, mean=0.0, std=std, a=-3*std, b=3*std)
+
+        std = math.sqrt(2.0 / (in_features + out_features))
+        nn.init.trunc_normal_(self.W, mean=0.0, std=std, a=-3 * std, b=3 * std)
 
     def forward(self, x: Float[Tensor, "... d_in"]) -> Float[Tensor, "... d_out"]:
         return einsum(x, self.W, "... d_in, d_in d_out -> ... d_out")
-
-    def extra_repr(self) -> str:
-        return f"d_in = {self.W.shape[0]}, d_out = {self.W.shape[1]}"
 
 
 class Embedding(nn.Module):
@@ -53,9 +51,6 @@ class Embedding(nn.Module):
 
     def forward(self, token_ids: Int[Tensor, "..."]) -> Float[Tensor, "... d_model"]:
         return self.W[token_ids]
-
-    def extra_repr(self) -> str:
-        return f"vocab_size = {self.W.shape[0]}, hidden_dimension = {self.W.shape[1]}"
 
 
 class RMSNorm(nn.Module):
