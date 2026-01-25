@@ -6,7 +6,10 @@ from torch import Tensor
 from torch.optim import Optimizer
 from jaxtyping import Float, Int
 from einops import reduce
+import numpy as np
+import numpy.typing as npt
 import math
+import typing, os
 
 
 def cross_entropy(
@@ -95,3 +98,36 @@ def gradient_clipping(parameters: Iterable[torch.nn.Parameter], max_norm: float,
         scale = max_norm / (total_norm + eps)
         for g in grads:
             g *= scale
+
+
+def get_batch(x: npt.NDArray[np.uint16], batch_size: int, context_len: int, device: str):
+    N = len(x)
+    batch_positions = np.random.randint(0, N - context_len, batch_size)
+    inputs = np.stack([x[pos: pos + context_len] for pos in batch_positions])
+    targets = np.stack([x[pos + 1: pos + context_len + 1] for pos in batch_positions])
+    return torch.tensor(inputs, device=device, dtype=torch.long), torch.tensor(targets, device=device, dtype=torch.long)
+
+
+def save_checkpoint(
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer,
+    iteration: int,
+    out: str | os.PathLike | typing.BinaryIO | typing.IO[bytes]
+):
+    obj = {
+        'model': model.state_dict(),
+        'optimizer': optimizer.state_dict(),
+        'iter': iteration
+    }
+    torch.save(obj, out)
+
+
+def load_checkpoint(
+    src: str | os.PathLike | typing.BinaryIO | typing.IO[bytes],
+    model: torch.nn.Module,
+    optimizer: torch.optim.Optimizer
+):
+    obj = torch.load(src)
+    model.load_state_dict(obj['model'])
+    optimizer.load_state_dict(obj['optimizer'])
+    return obj['iter']
