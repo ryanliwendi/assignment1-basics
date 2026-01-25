@@ -4,7 +4,8 @@ import torch
 from torch import Tensor
 from torch.optim import Optimizer
 from jaxtyping import Float, Int
-from einops import reduce, einsum
+from einops import reduce
+import math
 
 
 def cross_entropy(
@@ -52,5 +53,21 @@ class AdamW(Optimizer):
                 if p.grad is None:
                     continue
                 state = self.state[p]  # State is a flat dictionary without parameter groups
+                t = state.get('t', 1)
+                m = state.get('m', torch.zeros_like(p.data))
+                v = state.get('v', torch.zeros_like(p.data))
+
+                g = p.grad
+                m = beta1 * m + (1 - beta1) * g
+                v = beta2 * v + (1 - beta2) * (g ** 2)
+                lr_t = lr * math.sqrt(1 - beta2 ** t) / (1 - beta1 ** t)
+                p.data -= lr_t * m / (torch.sqrt(v) + eps)
+                p.data -= lr * weight_decay * p.data
+
+                t += 1
+                state['t'] = t
+                state['m'] = m
+                state['v'] = v
+        return loss
 
 
