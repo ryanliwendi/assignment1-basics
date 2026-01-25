@@ -8,13 +8,28 @@ import numpy.typing as npt
 import torch
 from jaxtyping import Bool, Float, Int
 from torch import Tensor
-from cs336_basics.bpe import train_bpe
-from cs336_basics.tokenizer import Tokenizer
-from cs336_basics.model import Linear, Embedding, RMSNorm, SwiGLU, RotaryPositionalEmbedding
-from cs336_basics.model import softmax, scaled_dot_product_attention
-from cs336_basics.model import MultiheadSelfAttention, TransformerBlock, TransformerLM
-from cs336_basics.train import cross_entropy, AdamW, learning_schedule, gradient_clipping
-from cs336_basics.train import get_batch, load_checkpoint,save_checkpoint
+from cs336_basics import (
+    train_bpe,
+    Tokenizer,
+    Linear,
+    Embedding,
+    RMSNorm,
+    SwiGLU,
+    RotaryPositionalEmbedding,
+    softmax,
+    scaled_dot_product_attention,
+    MultiheadSelfAttention,
+    TransformerBlock,
+    TransformerLM,
+    cross_entropy,
+    AdamW,
+    learning_schedule,
+    gradient_clipping,
+    get_batch,
+    load_checkpoint,
+    save_checkpoint,
+)
+
 
 def run_linear(
     d_in: int,
