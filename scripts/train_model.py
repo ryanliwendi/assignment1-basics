@@ -1,8 +1,10 @@
 from argparse import ArgumentParser
+import os
 
 import yaml
 import numpy as np
 import torch
+import math
 
 from cs336_basics import (
     TransformerLM,
@@ -29,11 +31,11 @@ def main():
     # Retrieve logging parameters
     log_interval = config['logging']['log_interval']
     eval_interval = config['logging']['eval_interval']
-    eval_batches = config['logging']['eval_batches']
 
     # Retrieve checkpointing parameters
     checkpoint_dir = config['checkpoints']['checkpoint_dir']
     checkpoint_interval = config['checkpoints']['checkpoint_interval']
+    os.makedirs(checkpoint_dir, exist_ok=True)
 
     train_data = np.load(config['data']['train_path'], mmap_mode='r')
     val_data = np.load(config['data']['val_path'], mmap_mode='r')
@@ -58,22 +60,14 @@ def main():
         weight_decay=config['optim']['weight_decay']
     )
 
-    def evaluate(step):
-        transformer.eval()
-        total_loss = 0.0
+    if args.resume:
+        if not args.checkpoint_path:
+            raise ValueError("--checkpoint_path is required when using --resume")
+        cur_step = load_checkpoint(args.checkpoint_path, transformer, optimizer) + 1
+    else:
+        cur_step = 1
 
-        with torch.no_grad():
-            for _ in range(eval_batches):
-                b, t = get_batch(val_data, batch_size, config['model']['context_length'], device)
-                l = cross_entropy(transformer(b), t)
-                total_loss += l.item()
-
-        transformer.train()
-        avg_loss = total_loss / eval_batches
-        print(f"Step: {step} | Val Loss: {avg_loss:.4f}")
-
-
-    for step in range(max_steps):
+    while cur_step < max_steps + 1:
         batch, target = get_batch(train_data, batch_size, config['model']['context_length'], device)
 
         optimizer.zero_grad()
@@ -84,7 +78,7 @@ def main():
         gradient_clipping(transformer.parameters(), max_norm)
 
         lr = learning_schedule(
-            t=step,
+            t=cur_step,
             alpha_max=config['lr_schedule']['alpha_max'],
             alpha_min=config['lr_schedule']['alpha_min'],
             t_warm=config['lr_schedule']['t_warm'],
@@ -95,18 +89,44 @@ def main():
 
         optimizer.step()
 
-        if step % log_interval == 0:
-            print_log(loss, lr, step)
+        if cur_step % log_interval == 0:
+            print_log(loss, lr, cur_step)
 
-        if step % eval_interval == 0:
-            evaluate(step)
+        if cur_step % eval_interval == 0:
+            evaluate(cur_step, transformer, val_data, config)
 
-        if step % checkpoint_interval == 0:
-            save_checkpoint(transformer, optimizer, step, f"{checkpoint_dir}/checkpoint_{step}.pt")
+        if cur_step % checkpoint_interval == 0:
+            save_checkpoint(transformer, optimizer, cur_step, f"{checkpoint_dir}/checkpoint_{cur_step}.pt")
+
+        cur_step += 1
+
+    save_checkpoint(transformer, optimizer, max_steps, f"{checkpoint_dir}/checkpoint_{max_steps}.pt")
+
+
+def evaluate(step, model, val_data, config):
+    model.eval()
+    total_loss = 0.0
+
+    eval_batches = config['logging']['eval_batches']
+    batch_size = config['training']['batch_size']
+    context_len = config['model']['context_length']
+    device = config['training']['device']
+
+    with torch.no_grad():
+        for _ in range(eval_batches):
+            batch, target = get_batch(val_data, batch_size, context_len, device)
+            loss = cross_entropy(model(batch), target)
+            total_loss += loss.item()
+
+    model.train()
+    avg_loss = total_loss / eval_batches
+    perplexity = math.exp(avg_loss)
+    print(f"Step: {step} | Val Loss: {avg_loss:.4f} | Val PPL: {perplexity:.2f}")
 
 
 def print_log(loss, lr, step):
-    print(f"Step: {step} | Loss: {loss.item():.4f} | LR: {lr:.6f}")
+    perplexity = math.exp(loss.item())
+    print(f"Step: {step} | Loss: {loss.item():.4f} | PPL: {perplexity:.2f} | LR: {lr:.6f}")
 
 
 def load_config(args):
@@ -130,6 +150,8 @@ def parse_args():
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--max_steps", type=int)
     parser.add_argument("--device", type=str)
+    parser.add_argument("--resume", action="store_true")  # A bool value of whether to load a checkpoint
+    parser.add_argument("--checkpoint_path", type=str, default=None)
 
     return parser.parse_args()
 
