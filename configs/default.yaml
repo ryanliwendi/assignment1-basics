@@ -9,12 +9,12 @@ model:
 
 optim:
   betas: [0.9, 0.999]
-  eps: 1e-8
+  eps: 0.00000001
   weight_decay: 0.1
 
 lr_schedule:
-  alpha_max: 1e-3
-  alpha_min: 1e-5
+  alpha_max: 0.001
+  alpha_min: 0.00001
   t_warm: 100
   t_cos: 10000
 
@@ -22,7 +22,7 @@ training:
   batch_size: 128
   max_steps: 10000
   max_norm: 1.0
-  device: cuda
+  device: mps
 
 data:
   train_path: outputs/openwebtext/train_encoded.npy

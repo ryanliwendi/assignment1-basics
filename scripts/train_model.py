@@ -133,12 +133,64 @@ def load_config(args):
     with open(args.config, 'r') as f:
         config = yaml.safe_load(f)
 
+    if args.vocab_size is not None:
+        config['model']['vocab_size'] = args.vocab_size
+    if args.context_length is not None:
+        config['model']['context_length'] = args.context_length
+    if args.num_layers is not None:
+        config['model']['num_layers'] = args.num_layers
+    if args.num_heads is not None:
+        config['model']['num_heads'] = args.num_heads
+    if args.d_model is not None:
+        config['model']['d_model'] = args.d_model
+    if args.d_ff is not None:
+        config['model']['d_ff'] = args.d_ff
+    if args.theta is not None:
+        config['model']['theta'] = args.theta
+
     if args.batch_size is not None:
         config['training']['batch_size'] = args.batch_size
     if args.max_steps is not None:
         config['training']['max_steps'] = args.max_steps
+    if args.max_norm is not None:
+        config['training']['max_norm'] = args.max_norm
     if args.device is not None:
         config['training']['device'] = args.device
+
+    if args.beta1 is not None:
+        config['optim']['betas'][0] = args.beta1
+    if args.beta2 is not None:
+        config['optim']['betas'][1] = args.beta2
+    if args.eps is not None:
+        config['optim']['eps'] = args.eps
+    if args.weight_decay is not None:
+        config['optim']['weight_decay'] = args.weight_decay
+
+    if args.alpha_max is not None:
+        config['lr_schedule']['alpha_max'] = args.alpha_max
+    if args.alpha_min is not None:
+        config['lr_schedule']['alpha_min'] = args.alpha_min
+    if args.t_warm is not None:
+        config['lr_schedule']['t_warm'] = args.t_warm
+    if args.t_cos is not None:
+        config['lr_schedule']['t_cos'] = args.t_cos
+
+    if args.train_path is not None:
+        config['data']['train_path'] = args.train_path
+    if args.val_path is not None:
+        config['data']['val_path'] = args.val_path
+
+    if args.log_interval is not None:
+        config['logging']['log_interval'] = args.log_interval
+    if args.eval_interval is not None:
+        config['logging']['eval_interval'] = args.eval_interval
+    if args.eval_batches is not None:
+        config['logging']['eval_batches'] = args.eval_batches
+
+    if args.checkpoint_dir is not None:
+        config['checkpoints']['checkpoint_dir'] = args.checkpoint_dir
+    if args.checkpoint_interval is not None:
+        config['checkpoints']['checkpoint_interval'] = args.checkpoint_interval
 
     return config
 
@@ -147,11 +199,42 @@ def parse_args():
     parser = ArgumentParser()
 
     parser.add_argument("--config", type=str, default="configs/default.yaml")
+
+    parser.add_argument("--vocab_size", type=int)
+    parser.add_argument("--context_length", type=int)
+    parser.add_argument("--num_layers", type=int)
+    parser.add_argument("--num_heads", type=int)
+    parser.add_argument("--d_model", type=int)
+    parser.add_argument("--d_ff", type=int)
+    parser.add_argument("--theta", type=float)
+
+    parser.add_argument("--beta1", type=float)
+    parser.add_argument("--beta2", type=float)
+    parser.add_argument("--eps", type=float)
+    parser.add_argument("--weight_decay", type=float)
+
+    parser.add_argument("--alpha_max", type=float)
+    parser.add_argument("--alpha_min", type=float)
+    parser.add_argument("--t_warm", type=int)
+    parser.add_argument("--t_cos", type=int)
+
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--max_steps", type=int)
+    parser.add_argument("--max_norm", type=float)
     parser.add_argument("--device", type=str)
+
+    parser.add_argument("--train_path", type=str)
+    parser.add_argument("--val_path", type=str)
+
+    parser.add_argument("--log_interval", type=int)
+    parser.add_argument("--eval_interval", type=int)
+    parser.add_argument("--eval_batches", type=int)
+
+    parser.add_argument("--checkpoint_dir", type=str)
+    parser.add_argument("--checkpoint_interval", type=int)
+
     parser.add_argument("--resume", action="store_true")  # A bool value of whether to load a checkpoint
-    parser.add_argument("--checkpoint_path", type=str, default=None)
+    parser.add_argument("--checkpoint_path", type=str)
 
     return parser.parse_args()
 
