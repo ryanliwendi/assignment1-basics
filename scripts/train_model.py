@@ -1,4 +1,3 @@
-import argparse
 from argparse import ArgumentParser
 
 import yaml
@@ -21,6 +20,21 @@ def main():
     args = parse_args()
     config = load_config(args)
 
+    # Retrieve training parameters
+    batch_size = config['training']['batch_size']
+    max_steps = config['training']['max_steps']
+    max_norm = config['training']['max_norm']
+    device = config['training']['device']
+
+    # Retrieve logging parameters
+    log_interval = config['logging']['log_interval']
+    eval_interval = config['logging']['eval_interval']
+    eval_batches = config['logging']['eval_batches']
+
+    # Retrieve checkpointing parameters
+    checkpoint_dir = config['checkpoints']['checkpoint_dir']
+    checkpoint_interval = config['checkpoints']['checkpoint_interval']
+
     train_data = np.load(config['data']['train_path'], mmap_mode='r')
     val_data = np.load(config['data']['val_path'], mmap_mode='r')
 
@@ -34,6 +48,8 @@ def main():
         theta=config['model']['theta']
     )
 
+    transformer.to(device)
+
     optimizer = AdamW(
         params=transformer.parameters(),
         lr=1.0,  # Placeholder, later replaced by learning_schedule
@@ -42,14 +58,55 @@ def main():
         weight_decay=config['optim']['weight_decay']
     )
 
-    batch_size = config['training']['batch_size']
-    max_steps = config['training']['max_steps']
-    max_norm = config['training']['max_norm']
-    device = config['training']['device']
+    def evaluate(step):
+        transformer.eval()
+        total_loss = 0.0
+
+        with torch.no_grad():
+            for _ in range(eval_batches):
+                b, t = get_batch(val_data, batch_size, config['model']['context_length'], device)
+                l = cross_entropy(transformer(b), t)
+                total_loss += l.item()
+
+        transformer.train()
+        avg_loss = total_loss / eval_batches
+        print(f"Step: {step} | Val Loss: {avg_loss:.4f}")
 
 
-def evaluate():
-    raise NotImplementedError
+    for step in range(max_steps):
+        batch, target = get_batch(train_data, batch_size, config['model']['context_length'], device)
+
+        optimizer.zero_grad()
+        loss = cross_entropy(transformer(batch), target)
+
+        loss.backward()
+
+        gradient_clipping(transformer.parameters(), max_norm)
+
+        lr = learning_schedule(
+            t=step,
+            alpha_max=config['lr_schedule']['alpha_max'],
+            alpha_min=config['lr_schedule']['alpha_min'],
+            t_warm=config['lr_schedule']['t_warm'],
+            t_cos=config['lr_schedule']['t_cos']
+        )
+        for group in optimizer.param_groups:
+            group['lr'] = lr
+
+        optimizer.step()
+
+        if step % log_interval == 0:
+            print_log(loss, lr, step)
+
+        if step % eval_interval == 0:
+            evaluate(step)
+
+        if step % checkpoint_interval == 0:
+            save_checkpoint(transformer, optimizer, step, f"{checkpoint_dir}/checkpoint_{step}.pt")
+
+
+def print_log(loss, lr, step):
+    print(f"Step: {step} | Loss: {loss.item():.4f} | LR: {lr:.6f}")
 
 
 def load_config(args):
@@ -72,7 +129,7 @@ def parse_args():
     parser.add_argument("--config", type=str, default="configs/default.yaml")
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("--max_steps", type=int)
-    parser.add_argument("--device", type=int)
+    parser.add_argument("--device", type=str)
 
     return parser.parse_args()
 
