@@ -71,8 +71,8 @@ def top_p_sampling(probs, p):
     cutoff_idx = 0
     for i, prob in enumerate(sorted_probs):
         cumulative += prob.item()
+        cutoff_idx = i
         if cumulative >= p:
-            cutoff_idx = i
             break
 
     sorted_probs[cutoff_idx + 1:] = 0.0

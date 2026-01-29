@@ -273,7 +273,7 @@ class TransformerLM(nn.Module):
 
     def forward(
         self,
-        token_ids: Int[Tensor, "batch_size sequence_length"],
+        token_ids: Int[Tensor, "batch_size seq_len"],
         token_positions: Int[Tensor, "... seq_len"] | None = None
     ):
         x = self.embedding(token_ids)
