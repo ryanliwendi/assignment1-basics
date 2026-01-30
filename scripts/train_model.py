@@ -101,6 +101,7 @@ def main():
         cur_step += 1
 
     save_checkpoint(transformer, optimizer, max_steps, f"{checkpoint_dir}/checkpoint_{max_steps}.pt")
+    evaluate(max_steps, transformer, val_data, config)
 
 
 def evaluate(step, model, val_data, config):
