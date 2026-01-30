@@ -1,5 +1,5 @@
 model:
-  vocab_size: 32000
+  vocab_size: 10000
   context_length: 256
   num_layers: 4
   num_heads: 16
@@ -25,8 +25,8 @@ training:
   device: mps
 
 data:
-  train_path: outputs/openwebtext/train_encoded.npy
-  val_path: outputs/openwebtext/valid_encoded.npy
+  train_path: outputs/tinystories/train_encoded.npy
+  val_path: outputs/tinystories/valid_encoded.npy
 
 logging:
   log_interval: 10
